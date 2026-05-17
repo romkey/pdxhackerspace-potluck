@@ -8,7 +8,7 @@ come back and edit their RSVP from any device.
 
 Configure the event with environment variables (see .env.example):
   POTLUCK_TITLE, POTLUCK_DATE, POTLUCK_LOCATION, POTLUCK_DESCRIPTION,
-  POTLUCK_CATEGORIES, POTLUCK_GITHUB_REPO, POTLUCK_DB
+  POTLUCK_CATEGORIES, POTLUCK_EXAMPLE_NAME, POTLUCK_GITHUB_REPO, POTLUCK_DB
 """
 
 import json
@@ -32,6 +32,7 @@ DESCRIPTION = os.environ.get(
     "POTLUCK_DESCRIPTION",
     "Let us know you're coming and what you'll bring.",
 )
+EXAMPLE_NAME = os.environ.get("POTLUCK_EXAMPLE_NAME", "Jack Hacksman").strip() or "Jack Hacksman"
 GITHUB_REPO = os.environ.get("POTLUCK_GITHUB_REPO", "").strip()
 
 _DEFAULT_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "potluck.db")
@@ -292,6 +293,7 @@ def render_page(editing=None, link_error=False):
         event_date=EVENT_DATE,
         location=LOCATION,
         description=DESCRIPTION,
+        example_name=EXAMPLE_NAME,
         github_repo=GITHUB_REPO,
         banner_src=banner_src,
         categories=CATEGORIES,
@@ -765,7 +767,7 @@ PAGE = r"""<!doctype html>
     <div class="sub" id="form-sub">No account needed — just fill this in.</div>
     <div class="field">
       <label for="f-name">Your name</label>
-      <input id="f-name" type="text" maxlength="80" placeholder="e.g. Sam Rivera" autocomplete="name">
+      <input id="f-name" type="text" maxlength="80" placeholder="e.g. {{ example_name }}" autocomplete="name">
     </div>
     <div class="row">
       <div class="field small">

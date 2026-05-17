@@ -65,6 +65,7 @@ gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 4 app:app
 | `POTLUCK_LOCATION`    | Free-text location line                | *(hidden if empty)*    |
 | `POTLUCK_DESCRIPTION` | Short blurb under the title            | a generic invite line  |
 | `POTLUCK_CATEGORIES`  | Comma-separated dish category labels   | current built-ins      |
+| `POTLUCK_EXAMPLE_NAME` | Example name shown in the RSVP form   | `Jack Hacksman`        |
 | `POTLUCK_DB`          | Path to the SQLite file                | `./data/potluck.db`    |
 | `POTLUCK_BANNER`      | Banner image — a file path or a URL    | *(auto-detect, below)* |
 | `POTLUCK_GITHUB_REPO` | Optional footer link to the source repo | *(hidden if empty)*   |
