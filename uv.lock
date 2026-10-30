@@ -440,7 +440,7 @@ wheels = [
 
 [[package]]
 name = "pdxhackerspace-potluck"
-version = "0.0.0"
+version = "0.0.4"
 source = { editable = "." }
 dependencies = [
     { name = "flask" },
