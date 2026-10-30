@@ -1,141 +1,135 @@
 # Potluck RSVP
 
-A tiny self-hosted RSVP app for potluck dinners. **No accounts, no logins** —
-anyone with the link can confirm they're coming and say what they're bringing.
+[![CI](https://github.com/romkey/pdxhackerspace-potluck/actions/workflows/ci.yaml/badge.svg)](https://github.com/romkey/pdxhackerspace-potluck/actions/workflows/ci.yaml)
+[![Lint](https://github.com/romkey/pdxhackerspace-potluck/actions/workflows/lint.yaml/badge.svg)](https://github.com/romkey/pdxhackerspace-potluck/actions/workflows/lint.yaml)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A tiny self-hosted RSVP app for potluck dinners. **No accounts, no logins**:
+anyone with the link can confirm they're coming and say what they're
+bringing, and gets a personal link to edit their RSVP later.
+
+> **AI disclosure:** This project was written by AI under human oversight,
+> following [these rules](https://github.com/romkey/python-ai-rules/blob/main/RULES.md).
+
+## What's here
+
+| Path | What it is |
+|------|------------|
+| `src/pdxhackerspace_potluck/` | The app: `config.py` reads settings from the environment, `db.py` and `migrations/` hold the PostgreSQL access and schema, `web.py` is the Flask app, `templates/page.html` is the UI |
+| `tests/` | pytest tests (they need PostgreSQL; the test compose file provides it) |
+| `docs/configuration.md` | Every environment variable |
+
+## Features
 
 - One person, one form: name, party size, and as many dishes as they like
-- Each dish has a configurable category; defaults are Meat, Vegetables, Carbs,
+- Configurable dish categories; defaults are Meat, Vegetables, Carbs,
   Appetizers, Desserts, Drinks, Other
 - A live "what's on the table" summary so the host can spot gaps
-- On submitting, each guest gets a **personal bookmarkable link** that lets
-  them come back and edit their RSVP from any device
+- A **personal bookmarkable link** for each guest to edit or remove their
+  RSVP from any device
 - Optional **1200x400 banner image** at the top of the page
-- **Dark mode** automatically, following the visitor's system setting
-- Single Python file + SQLite — nothing else to run
+- **Dark mode**, following the visitor's system setting
 
-Written by Claude/Cursor.
+## Technical details
 
-## Quick start (Docker)
+Flask on werkzeug's threaded server, PostgreSQL through psycopg 3. The
+schema is versioned in `src/pdxhackerspace_potluck/migrations/` and applied
+by `pdxhackerspace-potluck migrate` (the production compose file runs it
+before the app starts).
 
-1. Copy the example environment and edit it for your event:
+| Endpoint | |
+|----------|-|
+| `GET /` | The RSVP page and what everyone is bringing |
+| `GET /r/<token>` | A guest's personal page for editing their RSVP |
+| `POST /api/rsvp` | Create an RSVP; returns `id` and `token` |
+| `PUT /api/rsvp/<id>` | Update an RSVP (JSON body includes its `token`) |
+| `DELETE /api/rsvp/<id>` | Remove an RSVP (JSON body includes its `token`) |
+| `GET /banner` | The configured banner image, if it's a local file |
+| `GET /healthz` | Health check: `{"status": "ok", "version": ...}` |
 
-   ```bash
-   cp .env.example .env
-   ```
+There are no accounts: each RSVP has a private random token, and the
+personal link `/r/<token>` carries it. Anyone without the link sees the
+entry read-only. The browser that created an RSVP also remembers it in
+`localStorage`, so the main page shows an "Edit your RSVP" link there.
 
-2. Build and start it:
+This app has no spam protection. It's meant for sharing a private link with
+a known group; for anything wider, put it behind a reverse proxy with HTTPS
+(and basic auth if you like).
 
-   ```bash
-   docker compose up -d --build
-   ```
+### Banner image
 
-3. Open `http://your-server:8080` and share that link with your guests.
+Use a **1200x400** image (any 3:1 ratio works). Either drop `banner.png`
+(or `.jpg`, `.jpeg`, `.webp`, `.gif`) into the `data/` folder (picked up
+without a restart), or set `POTLUCK_BANNER` to a file path or an image URL.
 
-The RSVP database is stored in `./data/potluck.db` (a Docker volume), so it
-survives restarts and rebuilds. To stop: `docker compose down`.
+## Running it
 
-## Run without Docker
-
-```bash
-pip install -r requirements.txt
-python app.py          # serves on http://localhost:8080
-```
-
-Configure the event with environment variables, e.g.:
-
-```bash
-POTLUCK_TITLE="Spring Potluck" \
-POTLUCK_DATE="Sat, May 30 · 6 PM" \
-POTLUCK_LOCATION="The community hall" \
-python app.py
-```
-
-For something longer-lived than the dev server, use gunicorn:
+Requires Docker. Configuration comes from environment variables, kept in
+`.env` (see [docs/configuration.md](docs/configuration.md)):
 
 ```bash
-gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 4 app:app
+cp .env.example .env   # then edit it: event details, and the database password
+docker compose -f docker-compose.prod.yaml up -d
 ```
 
-## Configuration
+That runs the latest release from `ghcr.io/romkey/pdxhackerspace-potluck` with a PostgreSQL
+container (data in the `db-data` volume); set `APP_VERSION=X.Y.Z` to pin a
+release. The app answers on http://localhost:8080. Put `DATABASE_URL`'s
+password and `POSTGRES_PASSWORD` in `.env` and keep them the same.
 
-| Variable              | What it does                          | Default                |
-|-----------------------|----------------------------------------|------------------------|
-| `POTLUCK_TITLE`       | Event name shown as the heading        | `Our Potluck`          |
-| `POTLUCK_DATE`        | Free-text date/time line               | *(hidden if empty)*    |
-| `POTLUCK_LOCATION`    | Free-text location line                | *(hidden if empty)*    |
-| `POTLUCK_DESCRIPTION` | Short blurb under the title            | a generic invite line  |
-| `POTLUCK_CATEGORIES`  | Comma-separated dish category labels   | current built-ins      |
-| `POTLUCK_EXAMPLE_NAME` | Example name shown in the RSVP form   | `Jack Hacksman`        |
-| `POTLUCK_DB`          | Path to the SQLite file                | `./data/potluck.db`    |
-| `POTLUCK_BANNER`      | Banner image — a file path or a URL    | *(auto-detect, below)* |
-| `POTLUCK_GITHUB_REPO` | Optional footer link to the source repo | *(hidden if empty)*   |
-| `PORT`                | Port for `python app.py` dev server    | `8080`                 |
+### With pip
 
-Set `POTLUCK_CATEGORIES` as a comma-separated list, for example:
+Needs Python 3.14 or newer and a PostgreSQL database. Install into a
+virtual environment, from a release's wheel:
 
 ```bash
-POTLUCK_CATEGORIES="Mains,Sides,Desserts,Drinks"
+python3 -m venv ~/.venvs/pdxhackerspace-potluck
+~/.venvs/pdxhackerspace-potluck/bin/pip install https://github.com/romkey/pdxhackerspace-potluck/releases/download/vX.Y.Z/pdxhackerspace_potluck-X.Y.Z-py3-none-any.whl
+~/.venvs/pdxhackerspace-potluck/bin/pdxhackerspace-potluck --version
 ```
 
-Configured category labels are turned into stable lowercase IDs, so changing
-the labels later can affect where existing RSVP dishes appear.
+Set its environment variables yourself (see
+[docs/configuration.md](docs/configuration.md)); it doesn't read `.env`.
+Run `pdxhackerspace-potluck migrate` once, then `pdxhackerspace-potluck`.
 
-## Banner image
+## Development
 
-To show a graphical banner across the top of the page, use a **1200x400**
-image (any 3:1 ratio works — it's scaled to fit). There are two ways to add
-one:
+With Docker, nothing else to install:
 
-- **Easiest:** drop a file named `banner.png` (or `.jpg` / `.jpeg` / `.webp`
-  / `.gif`) into the `data/` folder, next to the database. It's picked up
-  automatically — no restart needed.
-- **Or** set `POTLUCK_BANNER` to a file path (e.g. `/data/banner.png`) or to
-  a full image URL (e.g. `https://.../banner.png`).
+```bash
+docker compose up --build                                  # run from the working tree, with PostgreSQL
+docker compose -f docker-compose.test.yaml run --rm test   # tests with coverage
+docker compose -f docker-compose.lint.yaml run --rm lint   # every lint check, as CI runs them
+```
 
-Leave it unset and the page simply shows the plain text header.
+With [uv](https://docs.astral.sh/uv/), which installs the exact versions
+CI tests (`uv.lock`). Point `DATABASE_URL` at a PostgreSQL, for example the
+one from `docker compose up db`:
 
-## Dark mode
+```bash
+export DATABASE_URL=postgresql://app:app@localhost:5432/app  # not-a-secret
+uv sync
+uv run pytest
+uv run mypy
+uv run pdxhackerspace-potluck migrate && uv run pdxhackerspace-potluck
+```
 
-Dark mode is automatic — the page follows each visitor's operating system or
-browser setting (`prefers-color-scheme`). There's no toggle and nothing to
-configure; light and dark palettes are both built in.
+With pip (25.1 or newer, for `--group`). pip doesn't read `uv.lock`, so it
+may pick newer dependency versions than CI tested:
 
-## Publishing a container image
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e . --group dev
+pytest
+mypy
+pdxhackerspace-potluck migrate && pdxhackerspace-potluck
+```
 
-The GitHub Actions workflow in `.github/workflows/publish-image.yml` builds and
-publishes the Docker image to GitHub Container Registry as
-`ghcr.io/<owner>/<repo>`.
+Either way, `uvx pre-commit install` (or `pip install pre-commit &&
+pre-commit install`) runs the lint checks on every commit.
 
-It runs on pushes to `main`, version tags like `v1.0.0`, and manual
-`workflow_dispatch` runs. The workflow uses the repository `GITHUB_TOKEN` with
-`packages: write` permission.
+## License
 
-## How "no login" editing works
-
-There are no accounts. When someone submits an RSVP, the app gives it a
-private random token and sends them to their **personal link**,
-`http://your-server:8080/r/<token>`. Bookmarking that page lets them return —
-on any device — to change their RSVP, add or drop dishes, or remove
-themselves entirely. Anyone without the link just sees the entry as
-read-only.
-
-As a convenience, the browser that created an RSVP also remembers it (in
-`localStorage`), so revisiting the main page shows an "Edit your RSVP" link
-on those entries. Losing that browser state just means using the bookmarked
-link instead — the RSVP itself is unaffected.
-
-## Upgrading from an earlier version
-
-If you ran an older single-dish version, the database is migrated
-automatically on first start: every existing RSVP becomes a guest with one
-dish, and personal links keep working. No manual steps needed — but back up
-`data/potluck.db` first if you want to be safe.
-
-## Notes
-
-- Runtime configuration lives in `.env.example`; copy it to `.env` for local
-  Docker Compose runs.
-- This app has no spam protection — it's meant for sharing a private link with
-  a known group, not posting publicly. Put it behind a reverse proxy with
-  HTTPS (and a basic-auth gate if you want) for anything beyond a friendly
-  guest list.
+[MIT](LICENSE)
