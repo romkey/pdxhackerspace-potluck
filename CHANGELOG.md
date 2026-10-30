@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-10-30
+
 ### Added
 
 - `GET /healthz`, the `migrate` command, and `POTLUCK_DATA_DIR` (where
