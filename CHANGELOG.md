@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Updated tooling pins: uv 0.13.6, setup-uv v10.3.3, ruff v0.17.3, shellcheck-py v0.11.0.1-1.
 - **Breaking:** the app now stores RSVPs in PostgreSQL. `DATABASE_URL` is
   required and `POTLUCK_DB` is gone. Existing SQLite data is not migrated;
   the database starts empty.
