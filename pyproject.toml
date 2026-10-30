@@ -1,6 +1,6 @@
 [project]
 name = "pdxhackerspace-potluck"
-version = "0.0.0"
+version = "0.0.3"
 description = "A tiny self-hosted RSVP app for potluck dinners."
 readme = "README.md"
 license = "MIT"
