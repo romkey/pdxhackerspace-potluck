@@ -1,0 +1,57 @@
+# Development: runs the app from your working tree, with the dev
+# dependencies installed.
+#
+#   cp .env.example .env              # then edit it
+#   docker compose up --build         # http://localhost:8080/healthz
+#   docker compose run --rm app bash  # a shell with everything installed
+#
+# Restart the app (docker compose restart app) to pick up code changes.
+# Tests, lint and production have their own compose files:
+#
+#   docker compose -f docker-compose.test.yaml run --rm test
+#   docker compose -f docker-compose.lint.yaml run --rm lint
+#   docker compose -f docker-compose.prod.yaml up -d
+
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    # uv run re-syncs /venv if pyproject.toml or uv.lock changed.
+    command: >-
+      sh -c "uv run --locked python -m pdxhackerspace_potluck migrate
+      && uv run --locked python -m pdxhackerspace_potluck"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/app  # not-a-secret
+      POTLUCK_DATA_DIR: /app/data
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - uv-cache:/root/.cache/uv
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18-trixie
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app  # not-a-secret: local dev only
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  uv-cache:
+  db-data:
