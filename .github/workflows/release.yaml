@@ -83,7 +83,7 @@ jobs:
           fi
 
       # bump-version.sh sets the version with `uv version`.
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Bump version on a release branch and open a PR
         id: pr
@@ -252,7 +252,7 @@ jobs:
           sbom: true
 
       - if: steps.exists.outputs.exists != 'true'
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@v10.3.3
       - name: Build the package
         if: steps.exists.outputs.exists != 'true'
         run: uv build
